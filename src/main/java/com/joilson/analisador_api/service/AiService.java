@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.joilson.analisador_api.dto.gemini.GeminiResponse;
+import com.joilson.analisador_api.enums.SentimentEnum;
 
 @Service 
 public class AiService {
@@ -26,7 +27,7 @@ public class AiService {
         this.restClient = RestClient.create();
     }
 
-    public String analyzeSentiment(String ratingText) {
+    public SentimentEnum analyzeSentiment(String ratingText) {
         String prompt = "Analise o sentimento da seguinte avaliação de um produto e responda APENAS com uma destas três palavras: POSITIVO, NEGATIVO ou NEUTRO. Avaliação: " + ratingText;
 
         Map<String, Object> requestBody = Map.of(
@@ -54,13 +55,15 @@ public class AiService {
                                     .body(GeminiResponse.class);
 
             if (Objects.isNull(response) || Objects.isNull(response.candidates()) || response.candidates().isEmpty()) {
-                return "NEUTRO";
+                return SentimentEnum.NEUTRO;
             }
-            
-            return response.candidates().get(0).content().parts().get(0).text().trim();
+
+            var sentimentText = response.candidates().get(0).content().parts().get(0).text().trim();
+
+            return SentimentEnum.fromValue(sentimentText);
         } catch (Exception e) {
             System.err.println("Erro ao chamar a API do gemini" + e.getMessage());
-            return "NEUTRO";
+            return SentimentEnum.NEUTRO;
         }
     }
 }

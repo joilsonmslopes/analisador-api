@@ -3,10 +3,13 @@ package com.joilson.analisador_api.service.scraper;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.joilson.analisador_api.dto.RatingDto;
+import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
 import com.joilson.analisador_api.model.Product;
 import com.joilson.analisador_api.model.Rating;
 import com.joilson.analisador_api.service.AiService;
@@ -24,9 +27,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor 
 public class ScraperService {
 
-    private final AiService aiService;
-    
-    public Product scrapeMercadoLivre(String url) {
+    public ScrapedProductDto scrapeMercadoLivre(String url) {
         try (Playwright playwright = Playwright.create()) {
             Path userDataDir = Paths.get("playwright-profile");
 
@@ -46,38 +47,33 @@ public class ScraperService {
 
             page.waitForSelector("h1.ui-pdp-title", new Page.WaitForSelectorOptions().setTimeout(60000));
 
-            Product product = new Product();
-            product.setOriginalLink(url);
+            ScrapedProductDto scrapedProductDto = new ScrapedProductDto();
+
+            scrapedProductDto.setOriginalLink(url);
 
             String title = page.locator("h1.ui-pdp-title").innerText();
-            product.setName(title);
+            scrapedProductDto.setName(title);
 
             String priceFraction = page.locator(".andes-money-amount__fraction").first().innerText().replace(".", "");
-            product.setCurrentPrice(new BigDecimal(priceFraction));
+            scrapedProductDto.setCurrentPrice(new BigDecimal(priceFraction));
 
             page.evaluate("window.scrollTo(0, document.body.scrollHeight)");
             page.waitForTimeout(2000);
 
             List<Locator> ratingsLocators = page.locator("p.ui-review-capability-comments__comment__content").all();
         
-            for (Locator ratingLocator : ratingsLocators) {
+            List<String> ratings = new ArrayList<>();
+
+            ratingsLocators.forEach(ratingLocator -> {
                 String ratingText = ratingLocator.innerText();
-
                 if (!ratingText.isEmpty() && !ratingText.isBlank()) {
-                    Rating rating = new Rating();
-                    rating.setOriginalText(ratingText);
-
-                    String sentiment = aiService.analyzeSentiment(ratingText);
-                    rating.setSentiment(sentiment);
-
-                    rating.setProduct(product);
-
-                    product.getRatings().add(rating);
+                    ratings.add(ratingText);
                 }
+            });
 
-            }
+            scrapedProductDto.setRatings(ratings);
 
-            return product;
+            return scrapedProductDto;
         } catch (PlaywrightException e) {
             throw new RuntimeException("Erro ao controlar o navegador headless: " + e.getMessage());
         }
