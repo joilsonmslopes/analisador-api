@@ -16,34 +16,52 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.PlaywrightException;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor 
 public class ScraperService {
 
+    private Playwright playwright;
+    private BrowserContext context;
+
+    @PostConstruct 
+    public void initBrowser() {
+        this.playwright = Playwright.create();
+        Path userDataDir = Paths.get("playwright-profile");
+
+        BrowserType.LaunchPersistentContextOptions options = new BrowserType.LaunchPersistentContextOptions()
+            .setHeadless(false)
+            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            .setViewportSize(1280, 720)
+            .setArgs(List.of("--disable-blink-features=AutomationControlled"));
+
+            this.context = playwright.chromium().launchPersistentContext(userDataDir, options);
+            this.context.addInitScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+    }
+
+    @PreDestroy 
+    public void closeBrowser() {
+        if (this.context != null) {
+            this.context.close();
+        }
+        if (this.playwright != null) {
+            this.playwright.close();
+        }
+    }
+
+
     public ScrapedProductDto scrapeMercadoLivre(String url) {
-        try (Playwright playwright = Playwright.create()) {
-            Path userDataDir = Paths.get("playwright-profile");
-
-            BrowserType.LaunchPersistentContextOptions options = new BrowserType.LaunchPersistentContextOptions()
-                .setHeadless(false)
-                .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .setViewportSize(1280, 720)
-                .setArgs(List.of("--disable-blink-features=AutomationControlled"));
-
-            BrowserContext context = playwright.chromium().launchPersistentContext(userDataDir, options);
-
-            context.addInitScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined)");
-
-            Page page = context.pages().get(0);
+        Page page = null;
+        try {
+            page = context.newPage();
 
             page.navigate(url, new Page.NavigateOptions().setTimeout(60000));
-
             page.waitForSelector("h1.ui-pdp-title", new Page.WaitForSelectorOptions().setTimeout(60000));
 
             ScrapedProductDto scrapedProductDto = new ScrapedProductDto();
-
             scrapedProductDto.setOriginalLink(url);
 
             String title = page.locator("h1.ui-pdp-title").innerText();
@@ -71,6 +89,10 @@ public class ScraperService {
             return scrapedProductDto;
         } catch (PlaywrightException e) {
             throw new RuntimeException("Erro ao controlar o navegador headless: " + e.getMessage());
+        } finally {
+            if (page != null) {
+                page.close();
+            }
         }
     }
 }
