@@ -8,12 +8,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.joilson.analisador_api.dto.RatingDto;
 import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
-import com.joilson.analisador_api.model.Product;
-import com.joilson.analisador_api.model.Rating;
-import com.joilson.analisador_api.service.AiService;
-import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Locator;
