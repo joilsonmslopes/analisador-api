@@ -32,7 +32,7 @@ public class ProductService {
     private final ProductMapper productMapper;
 
     public Product createFromUrl(String url) {
-        ScrapedProductDto scrapedProductDto = scraperService.scrapeMercadoLivre(url);
+        ScrapedProductDto scrapedProductDto = scraperService.scrape(url);
 
         Product product = productMapper.toEntity(scrapedProductDto);
         List<Rating> ratings = new ArrayList<>();
