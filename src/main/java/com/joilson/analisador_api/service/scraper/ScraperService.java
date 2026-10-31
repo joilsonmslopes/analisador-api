@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
 import com.joilson.analisador_api.service.scraper.factory.ScraperFactory;
+import com.joilson.analisador_api.util.UrlValidator;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Playwright;
@@ -51,10 +52,10 @@ public class ScraperService {
 
 
     public ScrapedProductDto scrape(String url) {
-        if (url.isBlank() || url.isEmpty()) {
-            throw new IllegalArgumentException("Por favor, insira uma URL válida");
+        if (!UrlValidator.isValidHttpUrl(url)) {
+            throw new IllegalArgumentException("Por favor, insira uma URL HTTP ou HTTPS válida.");
         }
-        
+
         var strategy = scraperFactory.getStrategy(url);
 
         return strategy.execute(url, context);
