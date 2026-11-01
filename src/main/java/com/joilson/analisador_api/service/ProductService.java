@@ -7,6 +7,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.joilson.analisador_api.dto.ProductResponseDto;
@@ -84,15 +86,16 @@ public class ProductService {
         }
     }
 
-    public List<ProductResponseDto> getAllProducts(ProductSortOption sortOption) {
+    public Page<ProductResponseDto> getAllProducts(int page, int size, ProductSortOption sortOption) {
         if (sortOption == null) {
             sortOption = ProductSortOption.NAME_ASC;
         }
-        var products = productRepository.findAll(Objects.requireNonNull(sortOption.getSort()));
 
-        return products.stream()
-                .map(productMapper::toResponseDto) 
-                .toList();
+        var pageable = PageRequest.of(page, size, Objects.requireNonNull(sortOption.getSort()));
+
+        var products = productRepository.findAll(pageable);
+
+        return products.map(productMapper::toResponseDto);
     }
 
 }

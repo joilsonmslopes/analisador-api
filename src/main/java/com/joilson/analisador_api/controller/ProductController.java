@@ -1,8 +1,7 @@
 package com.joilson.analisador_api.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,10 +25,12 @@ public class ProductController {
     private ProductService productService;
 
     @GetMapping("/all")
-    public ResponseEntity<List<ProductResponseDto>> getAllProducts(
+    public ResponseEntity<Page<ProductResponseDto>> getAllProducts(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
         @RequestParam(defaultValue = "NAME_ASC") ProductSortOption sort
     ) {
-        return ResponseEntity.ok(productService.getAllProducts(sort));
+        return ResponseEntity.ok(productService.getAllProducts(page, size, sort));
     }
 
     @PostMapping("/scrape")
