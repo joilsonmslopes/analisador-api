@@ -7,6 +7,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.joilson.analisador_api.dto.ProductResponseDto;
@@ -14,7 +16,6 @@ import com.joilson.analisador_api.dto.RatingDto;
 import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
 import com.joilson.analisador_api.enums.ProductSortOption;
 import com.joilson.analisador_api.mapper.ProductMapper;
-import com.joilson.analisador_api.model.Product;
 import com.joilson.analisador_api.model.Rating;
 import com.joilson.analisador_api.repository.ProductRepository;
 import com.joilson.analisador_api.service.scraper.ScraperService;
@@ -33,10 +34,10 @@ public class ProductService {
 
     private final ProductMapper productMapper;
 
-    public Product createFromUrl(String url) {
+    public ProductResponseDto createFromUrl(String url) {
         ScrapedProductDto scrapedProductDto = scraperService.scrape(url);
 
-        Product product = productMapper.toEntity(scrapedProductDto);
+        var product = productMapper.toEntity(scrapedProductDto);
         List<Rating> ratings = new ArrayList<>();
 
         var ratingsDto = getSentimentByGemini(scrapedProductDto.getRatings());
@@ -52,7 +53,9 @@ public class ProductService {
 
         product.setRatings(ratings);
 
-        return productRepository.save(product);
+        var productEntity = productRepository.save(product);
+
+        return productMapper.toResponseDto(productEntity);
     }
 
     private List<RatingDto> getSentimentByGemini(List<String> prompts) {
@@ -84,15 +87,16 @@ public class ProductService {
         }
     }
 
-    public List<ProductResponseDto> getAllProducts(ProductSortOption sortOption) {
+    public Page<ProductResponseDto> getAllProducts(int page, int size, ProductSortOption sortOption) {
         if (sortOption == null) {
             sortOption = ProductSortOption.NAME_ASC;
         }
-        var products = productRepository.findAll(Objects.requireNonNull(sortOption.getSort()));
 
-        return products.stream()
-                .map(productMapper::toResponseDto) 
-                .toList();
+        var pageable = PageRequest.of(page, size, Objects.requireNonNull(sortOption.getSort()));
+
+        var products = productRepository.findAll(pageable);
+
+        return products.map(productMapper::toResponseDto);
     }
 
 }
