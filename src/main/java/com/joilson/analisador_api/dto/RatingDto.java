@@ -8,5 +8,4 @@ import lombok.Data;
 public class RatingDto {
     private String originalText;
     private SentimentEnum sentiment;
-    private Long productId;
 }

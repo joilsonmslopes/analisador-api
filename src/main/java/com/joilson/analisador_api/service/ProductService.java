@@ -9,8 +9,10 @@ import java.util.concurrent.Future;
 
 import org.springframework.stereotype.Service;
 
+import com.joilson.analisador_api.dto.ProductResponseDto;
 import com.joilson.analisador_api.dto.RatingDto;
 import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
+import com.joilson.analisador_api.enums.ProductSortOption;
 import com.joilson.analisador_api.mapper.ProductMapper;
 import com.joilson.analisador_api.model.Product;
 import com.joilson.analisador_api.model.Rating;
@@ -82,8 +84,15 @@ public class ProductService {
         }
     }
 
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public List<ProductResponseDto> getAllProducts(ProductSortOption sortOption) {
+        if (sortOption == null) {
+            sortOption = ProductSortOption.NAME_ASC;
+        }
+        var products = productRepository.findAll(Objects.requireNonNull(sortOption.getSort()));
+
+        return products.stream()
+                .map(productMapper::toResponseDto) 
+                .toList();
     }
 
 }
