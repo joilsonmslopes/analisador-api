@@ -16,7 +16,6 @@ import com.joilson.analisador_api.dto.RatingDto;
 import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
 import com.joilson.analisador_api.enums.ProductSortOption;
 import com.joilson.analisador_api.mapper.ProductMapper;
-import com.joilson.analisador_api.model.Product;
 import com.joilson.analisador_api.model.Rating;
 import com.joilson.analisador_api.repository.ProductRepository;
 import com.joilson.analisador_api.service.scraper.ScraperService;
@@ -35,10 +34,10 @@ public class ProductService {
 
     private final ProductMapper productMapper;
 
-    public Product createFromUrl(String url) {
+    public ProductResponseDto createFromUrl(String url) {
         ScrapedProductDto scrapedProductDto = scraperService.scrape(url);
 
-        Product product = productMapper.toEntity(scrapedProductDto);
+        var product = productMapper.toEntity(scrapedProductDto);
         List<Rating> ratings = new ArrayList<>();
 
         var ratingsDto = getSentimentByGemini(scrapedProductDto.getRatings());
@@ -54,7 +53,9 @@ public class ProductService {
 
         product.setRatings(ratings);
 
-        return productRepository.save(product);
+        var productEntity = productRepository.save(product);
+
+        return productMapper.toResponseDto(productEntity);
     }
 
     private List<RatingDto> getSentimentByGemini(List<String> prompts) {
