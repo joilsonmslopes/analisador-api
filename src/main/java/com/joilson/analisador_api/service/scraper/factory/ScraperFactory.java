@@ -17,6 +17,6 @@ public class ScraperFactory {
         return strategies.stream()
             .filter(strategy -> strategy.supports(url))
             .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("Nenhuma strategy encontrada para a URL: " + url));
+            .orElseThrow(() -> new IllegalArgumentException("Marketplace não suportado. No momento, analisamos apenas links do Mercado Livre. " + url));
     }
 }

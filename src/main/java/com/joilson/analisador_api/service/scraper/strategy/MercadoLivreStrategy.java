@@ -28,7 +28,9 @@ public class MercadoLivreStrategy implements MarketplaceStrategy {
             page.waitForSelector("h1.ui-pdp-title", new Page.WaitForSelectorOptions().setTimeout(60000));
 
             ScrapedProductDto scrapedProductDto = new ScrapedProductDto();
-            scrapedProductDto.setOriginalLink(url);
+
+            String cleanResolvedUrl = cleanUrl(page.url());
+            scrapedProductDto.setOriginalLink(cleanResolvedUrl);
 
             String title = page.locator("h1.ui-pdp-title").innerText();
             scrapedProductDto.setName(title);
@@ -60,5 +62,21 @@ public class MercadoLivreStrategy implements MarketplaceStrategy {
                 page.close();
             }
         }
+    }
+
+    private String cleanUrl(String rawUrl) {
+        if (rawUrl == null) return null;
+
+        int hashIndex = rawUrl.indexOf("#");
+        if (hashIndex != -1) {
+            rawUrl = rawUrl.substring(0, hashIndex);
+        }
+
+        int queryIndex = rawUrl.indexOf("?");
+        if (queryIndex != -1) {
+            rawUrl = rawUrl.substring(0, queryIndex);
+        }
+
+        return rawUrl;
     }
 }
