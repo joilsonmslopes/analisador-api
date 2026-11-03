@@ -6,11 +6,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.joilson.analisador_api.dto.ProductResponseDto;
+import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
 import com.joilson.analisador_api.enums.ProductSortOption;
 import com.joilson.analisador_api.service.ProductService;
 
@@ -36,6 +38,12 @@ public class ProductController {
     @PostMapping("/scrape")
     public ResponseEntity<ProductResponseDto> scrapeAndSave(@RequestParam String url) {
         var responseDto = productService.createFromUrl(url);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
+
+    @PostMapping("/analyze-raw")
+    public ResponseEntity<ProductResponseDto> analyzeRawData(@RequestBody ScrapedProductDto rawData) {
+        var responseDto = productService.createFromRawData(rawData);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 }

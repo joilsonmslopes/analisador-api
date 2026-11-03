@@ -58,6 +58,25 @@ public class ProductService {
         return productMapper.toResponseDto(productEntity);
     }
 
+    public ProductResponseDto createFromRawData(ScrapedProductDto scrapedProductDto) {
+        var product = productMapper.toEntity(scrapedProductDto);
+        List<Rating> ratings = new ArrayList<>();
+
+        var ratingsDto = getSentimentByGemini(scrapedProductDto.getRatings());
+
+        for (RatingDto ratingDto : ratingsDto) {
+            Rating rating = new Rating();
+            rating.setOriginalText(ratingDto.getOriginalText());
+            rating.setProduct(product);
+            rating.setSentiment(ratingDto.getSentiment().getLabel());
+            ratings.add(rating);
+        }
+
+        product.setRatings(ratings);
+        var productEntity = productRepository.save(product);
+        return productMapper.toResponseDto(productEntity);
+    }
+
     private List<RatingDto> getSentimentByGemini(List<String> prompts) {
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<RatingDto>> futures = prompts.stream()
