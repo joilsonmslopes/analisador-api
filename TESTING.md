@@ -1,5 +1,29 @@
 # Testes de caracterização — etapa 1
 
+## Consolidação do processamento — 07/11/2026
+
+`ProductService.createFromUrl` mantém o scraping e `createFromRawData` mantém a
+entrada por DTO. Ambos delegam ao método privado `processAndSave`, que concentra
+mapeamento, análise, avaliações, associação bidirecional, save e resposta.
+Não foram adicionadas transações nem alterados contratos, schema ou integração IA.
+
+Três testes foram adicionados em `ProductServiceTest`: equivalência das respostas
+e dos agregados persistidos, equivalência quando uma análise falha e propagação
+da falha do scraper sem chamar IA/persistência. A igualdade de entidades com relações
+circulares não é usada: as referências são verificadas por identidade.
+
+Resultado atual: **33 testes aprovados**, sem erros ou ignorados, e **build Maven
+package aprovado**, incluindo repackage do Spring Boot. A execução selecionou as
+mesmas quatro classes abaixo. O teste de contexto completo permaneceu fora da seleção.
+O build precisou baixar dependências ausentes do plugin Maven após uma tentativa
+offline; não houve alteração no pom ou acesso a serviços da aplicação.
+
+```powershell
+.\mvnw.cmd -B "-Dtest=ProductControllerTest,ProductServiceTest,ProductMapperTest,AiServiceTest" package
+```
+
+## Registro da caracterização inicial
+
 Executar somente a rede de segurança isolada (Java 21):
 
 ```powershell

@@ -37,28 +37,14 @@ public class ProductService {
     public ProductResponseDto createFromUrl(String url) {
         ScrapedProductDto scrapedProductDto = scraperService.scrape(url);
 
-        var product = productMapper.toEntity(scrapedProductDto);
-        List<Rating> ratings = new ArrayList<>();
-
-        var ratingsDto = getSentimentByGemini(scrapedProductDto.getRatings());
-
-        for (RatingDto ratingDto : ratingsDto) {
-            Rating rating = new Rating();
-            rating.setOriginalText(ratingDto.getOriginalText());
-            rating.setProduct(product);
-            rating.setSentiment(ratingDto.getSentiment().getLabel());
-
-            ratings.add(rating);
-        }
-
-        product.setRatings(ratings);
-
-        var productEntity = productRepository.save(product);
-
-        return productMapper.toResponseDto(productEntity);
+        return processAndSave(scrapedProductDto);
     }
 
     public ProductResponseDto createFromRawData(ScrapedProductDto scrapedProductDto) {
+        return processAndSave(scrapedProductDto);
+    }
+
+    private ProductResponseDto processAndSave(ScrapedProductDto scrapedProductDto) {
         var product = productMapper.toEntity(scrapedProductDto);
         List<Rating> ratings = new ArrayList<>();
 
