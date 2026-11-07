@@ -3,6 +3,7 @@ package com.joilson.analisador_api.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,9 +37,11 @@ public class ProductController {
     }
 
     @PostMapping("/scrape")
-    public ResponseEntity<ProductResponseDto> scrapeAndSave(@RequestParam String url) {
-        var responseDto = productService.createFromUrl(url);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    public ResponseEntity<ProblemDetail> scrapeAndSave() {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.GONE,
+            "A coleta por URL foi descontinuada. Use a extensão Chrome para coletar os dados e envie-os para /api/products/analyze-raw.");
+        problem.setTitle("Endpoint descontinuado");
+        return ResponseEntity.status(HttpStatus.GONE).body(problem);
     }
 
     @PostMapping("/analyze-raw")

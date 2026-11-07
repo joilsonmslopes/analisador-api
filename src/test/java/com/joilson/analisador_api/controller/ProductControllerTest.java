@@ -103,6 +103,23 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno no servidor."));
     }
 
+    @Test
+    void retiredScrapeEndpointReturnsGoneWithoutCallingTheService() throws Exception {
+        mvc.perform(post("/api/products/scrape").param("url", "https://produto.mercadolivre.com.br/MLB-123"))
+                .andExpect(status().isGone())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(410))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("/api/products/analyze-raw")));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void retiredScrapeEndpointReturnsGoneEvenWithoutAUrl() throws Exception {
+        mvc.perform(post("/api/products/scrape"))
+                .andExpect(status().isGone()).andExpect(jsonPath("$.status").value(410));
+        verifyNoInteractions(service);
+    }
+
     private ProductResponseDto response() {
         var result = new ProductResponseDto();
         result.setId(42L); result.setName("Mouse"); result.setCurrentPrice(new BigDecimal("19.90"));

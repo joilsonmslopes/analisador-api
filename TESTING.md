@@ -1,5 +1,25 @@
 # Testes de caracterização — etapa 1
 
+## Remoção do navegador — resultado atual
+
+O backend não contém mais serviço de scraping ou dependência de navegador.
+Os três testes exclusivos do caminho por URL foram retirados juntamente com esse
+comportamento; os oito testes de ingestão raw/listagem foram preservados e usam
+o construtor sem scraper. Dois testes MVC novos verificam 410 Gone para a rota
+aposentada, com e sem URL, e nenhuma interação com ProductService.
+
+Resultado: **32 testes aprovados, zero falhas/erros/ignorados**, e `clean package`
+aprovado com as quatro classes isoladas. A limpeza evita empacotar classes antigas.
+
+```powershell
+.\mvnw.cmd -o -B "-Dtest=ProductControllerTest,ProductServiceTest,ProductMapperTest,AiServiceTest" clean package
+```
+
+ScrapedProductDto, ingestão raw, consultas e integração Gemini foram preservados.
+O contexto completo não foi executado, pois ainda depende do banco/configuração;
+a dependência de Chromium na inicialização foi eliminada. Nenhum banco foi acessado.
+As seções abaixo registram etapas anteriores e seus resultados históricos.
+
 ## Consolidação do processamento — 07/11/2026
 
 `ProductService.createFromUrl` mantém o scraping e `createFromRawData` mantém a
