@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -22,17 +21,17 @@ import com.joilson.analisador_api.enums.SentimentEnum;
 import com.joilson.analisador_api.mapper.ProductMapper;
 import com.joilson.analisador_api.model.Product;
 import com.joilson.analisador_api.repository.ProductRepository;
-import com.joilson.analisador_api.service.scraper.ScraperService;
+
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
     @Mock ProductRepository repository;
-    @Mock ScraperService scraper;
+
     @Mock AiService ai;
     ProductService service;
 
     @BeforeEach
-    void setup() { service = new ProductService(repository, scraper, ai, new ProductMapper()); }
+    void setup() { service = new ProductService(repository, ai, new ProductMapper()); }
 
     @Test
     void savesTheAggregateWithBidirectionalRatingsAndPreservesInputOrder() {
@@ -56,15 +55,15 @@ class ProductServiceTest {
                 result.getRatings().stream().map(r -> r.getSentiment()).toList());
         verify(ai).analyzeSentiment("Bom"); verify(ai).analyzeSentiment("Ruim"); verify(ai).analyzeSentiment("Normal");
         verify(repository).save(any(Product.class));
-        verifyNoInteractions(scraper);
+
     }
 
     @Test
-    void emptyRatingsAreSavedWithoutCallingAiOrScraper() {
+    void emptyRatingsAreSavedWithoutCallingAi() {
         saveUnchanged();
         assertTrue(service.createFromRawData(input(List.of())).getRatings().isEmpty());
         verify(repository).save(any(Product.class));
-        verifyNoInteractions(ai, scraper);
+        verifyNoInteractions(ai);
     }
 
     @Test
@@ -76,7 +75,7 @@ class ProductServiceTest {
         assertEquals(1, result.getRatings().size());
         assertEquals("Bom", result.getRatings().getFirst().getOriginalText());
         verify(repository).save(any(Product.class));
-        verifyNoInteractions(scraper);
+
     }
 
     @Test
@@ -90,7 +89,7 @@ class ProductServiceTest {
     @Test
     void nullRatingsCurrentlyFailBeforePersistence() {
         assertThrows(NullPointerException.class, () -> service.createFromRawData(input(null)));
-        verifyNoInteractions(repository, ai, scraper);
+        verifyNoInteractions(repository, ai);
     }
 
     @Test
@@ -98,7 +97,7 @@ class ProductServiceTest {
         var failure = new IllegalStateException("simulated save failure");
         when(repository.save(any(Product.class))).thenThrow(failure);
         assertSame(failure, assertThrows(IllegalStateException.class, () -> service.createFromRawData(input(List.of()))));
-        verifyNoInteractions(ai, scraper);
+        verifyNoInteractions(ai);
     }
 
     @Test
@@ -108,7 +107,7 @@ class ProductServiceTest {
         when(repository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(product), pageable, 1));
         var result = service.getAllProducts(0, 10, null);
         assertEquals(1, result.getTotalElements()); assertEquals(5L, result.getContent().getFirst().getId());
-        verify(repository).findAll(pageable); verifyNoInteractions(ai, scraper);
+        verify(repository).findAll(pageable); verifyNoInteractions(ai);
     }
 
     @Test
@@ -124,70 +123,6 @@ class ProductServiceTest {
 
     private void saveUnchanged() {
         when(repository.save(any(Product.class))).thenAnswer(call -> call.getArgument(0));
-    }
-
-    @Test
-    void urlAndRawFlowsProduceEquivalentResponsesAndAggregates() {
-        String url = "https://produto.mercadolivre.com.br/MLB-123";
-        var dto = input(List.of("Bom", "Ruim"));
-        when(scraper.scrape(url)).thenReturn(dto);
-        when(ai.analyzeSentiment("Bom")).thenReturn(SentimentEnum.POSITIVO);
-        when(ai.analyzeSentiment("Ruim")).thenReturn(SentimentEnum.NEGATIVO);
-        when(repository.save(any(Product.class))).thenAnswer(call -> {
-            Product product = call.getArgument(0);
-            product.setId(42L);
-            return product;
-        });
-
-        var fromUrl = service.createFromUrl(url);
-        var fromRaw = service.createFromRawData(dto);
-
-        assertEquals(fromRaw, fromUrl);
-        assertEquals(List.of("Bom", "Ruim"), fromUrl.getRatings().stream().map(r -> r.getOriginalText()).toList());
-        var saved = ArgumentCaptor.forClass(Product.class);
-        verify(repository, times(2)).save(saved.capture());
-        var first = saved.getAllValues().get(0);
-        var second = saved.getAllValues().get(1);
-        assertNotSame(first, second);
-        assertEquals(first.getName(), second.getName());
-        assertEquals(first.getCurrentPrice(), second.getCurrentPrice());
-        assertEquals(first.getOriginalLink(), second.getOriginalLink());
-        for (var product : saved.getAllValues()) {
-            assertEquals(List.of("Positivo", "Negativo"), product.getRatings().stream().map(r -> r.getSentiment()).toList());
-            product.getRatings().forEach(rating -> assertSame(product, rating.getProduct()));
-        }
-        verify(scraper).scrape(url);
-        verifyNoMoreInteractions(scraper);
-        verify(ai, times(2)).analyzeSentiment("Bom");
-        verify(ai, times(2)).analyzeSentiment("Ruim");
-    }
-
-    @Test
-    void urlAndRawFlowsPreserveTheSameAiFailureBehavior() {
-        String url = "https://produto.mercadolivre.com.br/MLB-123";
-        var dto = input(List.of("Falha", "Bom"));
-        when(scraper.scrape(url)).thenReturn(dto);
-        when(ai.analyzeSentiment("Falha")).thenThrow(new RuntimeException("simulated failure"));
-        when(ai.analyzeSentiment("Bom")).thenReturn(SentimentEnum.POSITIVO);
-        saveUnchanged();
-
-        var fromUrl = service.createFromUrl(url);
-        var fromRaw = service.createFromRawData(dto);
-
-        assertEquals(fromRaw, fromUrl);
-        assertEquals(1, fromUrl.getRatings().size());
-        assertEquals("Bom", fromUrl.getRatings().getFirst().getOriginalText());
-        verify(repository, times(2)).save(any(Product.class));
-        verify(scraper).scrape(url);
-    }
-
-    @Test
-    void scraperFailurePropagatesWithoutAnalysisOrPersistence() {
-        String url = "https://produto.mercadolivre.com.br/MLB-123";
-        var failure = new RuntimeException("simulated scraping failure");
-        when(scraper.scrape(url)).thenThrow(failure);
-        assertSame(failure, assertThrows(RuntimeException.class, () -> service.createFromUrl(url)));
-        verifyNoInteractions(ai, repository);
     }
 
     private ScrapedProductDto input(List<String> ratings) {

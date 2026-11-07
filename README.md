@@ -1,71 +1,69 @@
-# 🟢 Marketplace Analyzer - API (Backend)
+# Marketplace Analyzer — API
 
-> Motor de Inteligência Competitiva que realiza web scraping de e-commerces (Mercado Livre) e processa a análise de sentimento dos consumidores utilizando a IA do Google Gemini.
+Backend Java 21 e Spring Boot 3.3.4 para receber produtos coletados pela extensão
+Chrome, analisar comentários com Gemini e persistir produtos/avaliações em PostgreSQL.
+A coleta de páginas é responsabilidade exclusiva da extensão.
 
-## 🚀 Tecnologias e Stack
+## Execução
 
-* **Linguagem:** Java 21
-* **Framework:** Spring Boot 3.3.4
-* **Web Scraping:** Playwright Chromium (Headless)
-* **Inteligência Artificial:** Google Gemini API (via Spring RestClient)
-* **Banco de Dados:** PostgreSQL (Supabase)
-* **Concorrência:** Virtual Threads (Project Loom)
+Configure as variáveis DB_URL (JDBC PostgreSQL), DB_USERNAME, DB_PASSWORD,
+GEMINI_API_KEY, GEMINI_API_URL e CORS_ALLOWED_ORIGINS. Veja
+src/main/resources/application.properties. Execute com JDK 21:
 
-## 🧠 Decisões Arquiteturais e de Engenharia
+```powershell
+.\mvnw.cmd spring-boot:run
+```
 
-Este projeto foi construído focando em **Clean Architecture**, princípios **SOLID** e alta performance:
+Não é necessário navegador no backend. O Dockerfile usa imagens Temurin 21 para
+compilação e execução, sem instalação de bibliotecas gráficas.
 
-1. **Concorrência de Alta Performance com Virtual Threads:**
-   * **O Problema:** O envio de dezenas de avaliações sequenciais para a API do Gemini criava um gargalo de rede (N+1 I/O Blocking), travando a resposta HTTP.
-   * **A Solução:** Implementação do padrão de concorrência estruturada (`Structured Concurrency`) com `Executors.newVirtualThreadPerTaskExecutor()` do Java 21. As requisições para a LLM agora ocorrem em paralelo, escalando maciçamente sem esgotar as threads do Sistema Operacional.
+## Contratos
 
-2. **Gerenciamento de Ciclo de Vida do Navegador (Prevenção de OOM):**
-   * **O Problema:** Instanciar um navegador completo a cada requisição de scraping causava picos de consumo de RAM (Out-Of-Memory) e lentidão.
-   * **A Solução:** O `Playwright` e o `BrowserContext` foram configurados como *Singletons* gerenciados pelo Spring (`@PostConstruct` e `@PreDestroy`). Cada extração ocorre isoladamente em uma nova aba (`Page`), que é destruída de forma segura no bloco `finally`, mantendo o consumo de memória linear.
+- GET /api/products/all?page=0&size=10&sort=NAME_ASC: página de produtos e avaliações.
+  Ordenações: NAME_ASC, NAME_DESC, PRICE_ASC e PRICE_DESC.
+- POST /api/products/analyze-raw: recebe o JSON abaixo e retorna 201 com o produto
+  persistido, id e avaliações com originalText/sentiment.
+- POST /api/products/scrape: descontinuado; retorna 410 Gone com ProblemDetail e
+  orientação para /api/products/analyze-raw. Não coleta dados, não chama Gemini e
+  não persiste nada. A URL não é mais obrigatória, para sempre comunicar a retirada.
 
-3. **Integração REST Imutável e Type-Safe:**
-   * **A Solução:** Remoção de bibliotecas pesadas de abstração. A comunicação com o Gemini foi feita diretamente com o `RestClient` nativo do Spring Boot 3, mapeando o JSON de resposta para **Records** do Java 21 (`GeminiResponse`, `Candidate`, `Part`). Isso elimina *warnings*, *casts* inseguros e garante a imutabilidade dos DTOs.
+```json
+{
+  "name": "Mouse",
+  "currentPrice": 19.90,
+  "originalLink": "https://produto.mercadolivre.com.br/MLB-123",
+  "ratings": ["Bom"]
+}
+```
 
-4. **Segurança de Borda (Global CORS):**
-   * Configuração centralizada utilizando `WebMvcConfigurer`, restringindo o consumo da API exclusivamente à porta do frontend React (`http://localhost:5173`), sem vazamento de anotações soltas nos Controllers.
+O DTO ScrapedProductDto foi preservado por fazer parte do contrato de ingestão.
+Os campos de resposta e sentimentos POSITIVO, NEGATIVO e NEUTRO foram mantidos.
 
-## ⚙️ Como Executar Localmente
+## Arquitetura atual
 
-### Pré-requisitos
-* Java Development Kit (JDK 21+)
-* Maven
-* Chave de API do Google Gemini (Google AI Studio)
-* Banco de Dados PostgreSQL
+ProductController recebe o DTO; ProductService delega a processAndSave para mapear,
+analisar comentários, associar Product/Rating e salvar o agregado; ProductMapper
+produz a resposta. AiService usa RestClient e DTOs próprios do Gemini. A análise
+paralela com virtual threads ocorre antes do save, sem nova transação envolvendo
+chamadas externas. Não foi implementado um novo Strategy/Registry nesta etapa.
 
-### Configuração
-1. Clone o repositório e acesse a pasta do backend:
-   ```bash
-   git clone https://github.com/seu-usuario/marketplace-analyzer.git
-   cd marketplace-analyzer/backend
-   ```
+## Retirada do navegador — 07/11/2026
 
-2. Configure o arquivo `src/main/resources/application.properties`:
-   ```properties
-   # Supabase / Postgres
-   spring.datasource.url=jdbc:postgresql://<SEU_HOST>:5432/postgres
-   spring.datasource.username=<SEU_USER>
-   spring.datasource.password=<SUA_SENHA>
-   spring.jpa.hibernate.ddl-auto=update
-   
-   # Google Gemini API
-   gemini.api.key=SUA_CHAVE_AQUI
-   gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
-   ```
+A dependência Playwright, o serviço de scraping, Factory, Strategies, validador de
+URL exclusivo do fluxo antigo e tratamento de erro headless foram removidos.
+Não há coleta fictícia ou fallback de scraping no backend.
 
-3. Inicie o servidor Spring Boot:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-   A API estará disponível em `http://localhost:8080`.
+Nos fontes conhecidos, a extensão usa analyze-raw e all; o dashboard usa all.
+Não foram encontrados consumidores ativos de scrape nesses projetos. Como não é
+possível excluir consumidores externos, foi escolhida a resposta 410 Gone, em vez
+da remoção direta da rota. A decisão foi confirmada pelo responsável pelo projeto.
 
-## 📡 Endpoints (REST)
+Banco de dados, schema, configuração Gemini e extensão não foram alterados.
+Dados de perfil/cache de navegador eventualmente existentes no ambiente de deploy
+não foram acessados nem apagados; podem ser descartados operacionalmente após
+verificar que não são compartilhados por outro processo.
 
-| Método | Rota | Descrição |
-| :--- | :--- | :--- |
-| `GET` | `/api/products/all` | Retorna todos os produtos do banco e o histórico de análises de sentimento. |
-| `POST` | `/api/products/scrape?url={URL}` | Recebe um link do Mercado Livre, realiza o scraping, analisa o sentimento via IA e salva os resultados. |
+## Testes
+
+Veja TESTING.md para execução isolada, resultados e limitações. O teste legado de
+contexto completo ainda depende do banco e da configuração da aplicação.

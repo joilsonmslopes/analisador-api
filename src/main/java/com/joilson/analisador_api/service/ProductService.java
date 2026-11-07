@@ -18,7 +18,6 @@ import com.joilson.analisador_api.enums.ProductSortOption;
 import com.joilson.analisador_api.mapper.ProductMapper;
 import com.joilson.analisador_api.model.Rating;
 import com.joilson.analisador_api.repository.ProductRepository;
-import com.joilson.analisador_api.service.scraper.ScraperService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,17 +27,9 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
-    private final ScraperService scraperService;
-
     private final AiService aiService;
 
     private final ProductMapper productMapper;
-
-    public ProductResponseDto createFromUrl(String url) {
-        ScrapedProductDto scrapedProductDto = scraperService.scrape(url);
-
-        return processAndSave(scrapedProductDto);
-    }
 
     public ProductResponseDto createFromRawData(ScrapedProductDto scrapedProductDto) {
         return processAndSave(scrapedProductDto);

@@ -18,15 +18,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ProblemDetail handleRuntimeException(RuntimeException ex) {
-        if (ex.getMessage() != null && ex.getMessage().contains("navegador headless")) {
-            var problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
-                "Não foi possível acessar os dados do produto no momento. O site pode estar bloqueando o acesso."
-            );
-            problemDetail.setTitle("Falha na Extração");
-            problemDetail.setProperty("timestamp", System.currentTimeMillis());
-            return problemDetail;
-        }
-
         var genericProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro interno no servidor.");
         genericProblemDetail.setTitle("Erro de sistema");
         genericProblemDetail.setProperty("timestamp", System.currentTimeMillis());
