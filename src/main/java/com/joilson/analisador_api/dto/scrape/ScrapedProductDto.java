@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 public class ScrapedProductDto {
+    private String marketplace;
     private String name;
     private BigDecimal currentPrice;
     private String originalLink;

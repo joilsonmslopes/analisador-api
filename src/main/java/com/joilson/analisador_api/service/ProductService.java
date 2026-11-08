@@ -16,6 +16,7 @@ import com.joilson.analisador_api.dto.RatingDto;
 import com.joilson.analisador_api.dto.scrape.ScrapedProductDto;
 import com.joilson.analisador_api.enums.ProductSortOption;
 import com.joilson.analisador_api.mapper.ProductMapper;
+import com.joilson.analisador_api.marketplace.MarketplaceProcessorRegistry;
 import com.joilson.analisador_api.model.Rating;
 import com.joilson.analisador_api.repository.ProductRepository;
 
@@ -31,8 +32,10 @@ public class ProductService {
 
     private final ProductMapper productMapper;
 
+    private final MarketplaceProcessorRegistry marketplaceProcessors;
+
     public ProductResponseDto createFromRawData(ScrapedProductDto scrapedProductDto) {
-        return processAndSave(scrapedProductDto);
+        return processAndSave(marketplaceProcessors.process(scrapedProductDto));
     }
 
     private ProductResponseDto processAndSave(ScrapedProductDto scrapedProductDto) {

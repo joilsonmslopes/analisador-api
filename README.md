@@ -67,3 +67,7 @@ verificar que não são compartilhados por outro processo.
 
 Veja TESTING.md para execução isolada, resultados e limitações. O teste legado de
 contexto completo ainda depende do banco e da configuração da aplicação.
+
+## Processamento de marketplaces
+
+Consulte [o contrato e o guia de extensão](docs/marketplaces.md) para adicionar estratégias de validação e normalização sem alterar o fluxo central.

@@ -1,5 +1,21 @@
 # Testes de caracterização — etapa 1
 
+## Registry de marketplaces — 07/11/2026
+
+Validação atual: **56 testes aprovados, zero falhas, erros ou ignorados** nas classes
+MarketplaceProcessorTest, ProductServiceTest, ProductControllerTest, ProductMapperTest
+e AiServiceTest. O teste de contexto completo não foi executado por depender de configuração externa.
+Nenhuma chamada real a banco, Gemini ou navegador foi realizada.
+
+Os 23 casos de marketplace cobrem identificação explícita e legada, normalização,
+IDs desconhecidos, divergência de domínio, URLs inválidas, domínios falsificados,
+registro duplicado, IDs malformados, inferência ambígua e delegação para estratégia injetada.
+ProductServiceTest também verifica rejeição antes de IA/persistência.
+Avaliações nulas agora são normalizadas para lista vazia; o registro histórico de
+NullPointerException abaixo foi superado por essa alteração intencional.
+
+Contrato e instruções para adicionar estratégias: [marketplaces](docs/marketplaces.md).
+
 ## Remoção do navegador — resultado atual
 
 O backend não contém mais serviço de scraping ou dependência de navegador.
