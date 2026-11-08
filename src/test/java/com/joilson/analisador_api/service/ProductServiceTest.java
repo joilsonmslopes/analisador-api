@@ -31,7 +31,7 @@ class ProductServiceTest {
     ProductService service;
 
     @BeforeEach
-    void setup() { service = new ProductService(repository, ai, new ProductMapper()); }
+    void setup() { service = new ProductService(repository, ai, new ProductMapper(), new com.joilson.analisador_api.marketplace.MarketplaceProcessorRegistry(List.of(new com.joilson.analisador_api.marketplace.MercadoLivreProcessor()))); }
 
     @Test
     void savesTheAggregateWithBidirectionalRatingsAndPreservesInputOrder() {
@@ -87,8 +87,17 @@ class ProductServiceTest {
     }
 
     @Test
-    void nullRatingsCurrentlyFailBeforePersistence() {
-        assertThrows(NullPointerException.class, () -> service.createFromRawData(input(null)));
+    void nullRatingsAreNormalizedToEmpty() {
+        saveUnchanged();
+        assertTrue(service.createFromRawData(input(null)).getRatings().isEmpty());
+        verifyNoInteractions(ai);
+    }
+
+    @Test
+    void invalidMarketplaceStopsBeforeAiAndPersistence() {
+        var dto = input(List.of("Bom"));
+        dto.setMarketplace("unsupported");
+        assertThrows(IllegalArgumentException.class, () -> service.createFromRawData(dto));
         verifyNoInteractions(repository, ai);
     }
 
